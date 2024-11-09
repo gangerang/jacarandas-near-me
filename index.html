@@ -131,6 +131,12 @@
 						fillOpacity: 0.8, // Opacity of the fill
 						weight: 1 // Border thickness
 					});
+				},
+				onEachFeature: function (feature, layer) {
+					const lat = feature.geometry.coordinates[1];
+					const lng = feature.geometry.coordinates[0];
+					const googleMapsLink = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">Navigate here</a>`;
+					layer.bindPopup(googleMapsLink);
 				}
 			});
 
@@ -147,22 +153,6 @@
 			// 	}
 			// });
 
-			///////////////////////////
-			// arcgis server vector popups
-			// https://developers.arcgis.com/esri-leaflet/samples/feature-layer-popups/
-			///////////////////////////
-			
-			// function to simplify popup definition
-			function bindPopupToLayer(layer, formatString) {
-				layer.bindPopup(function (featureLayer) {
-					return L.Util.template(formatString, featureLayer.feature.properties);
-				});
-			}
-			
-			// // popup layers and format strings
-			// bindPopupToLayer(vector_sydney_jacaranda, 
-			// 	`<p>{SpeciesName} - {TreeHeight}m high</p>
-			// `);
 
 			///////////////////////////
 			// layer control 

@@ -1,0 +1,220 @@
+<html>
+    <head>
+        <title>Jacarandas Near Me</title>
+        <meta charset="utf-8"/>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+		<style>
+			body, #map {
+				height: 100vh;
+				margin: 0;
+			}
+			.button-container {
+				display: flex;
+				gap: 10px; /* Space between buttons */
+			}
+		</style>
+    </head>
+    <body>
+        <div id="map"></div>
+
+		<!-- <div id="buttonContainer" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; gap: 2px;">
+			<button onclick="window.open('', '_blank')">About</button>
+		</div> -->
+	
+        <script src="https://unpkg.com/leaflet@1.9.0/dist/leaflet.js"></script>
+
+		<!-- Load Esri Leaflet from CDN -->
+		<script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+
+		<!-- Load Esri Leaflet Vector from CDN -->
+		<script src="https://unpkg.com/esri-leaflet-vector@4.2.3/dist/esri-leaflet-vector.js" crossorigin=""></script>
+				
+		<!-- Load control layers tree https://github.com/jjimenezshaw/Leaflet.Control.Layers.Tree -->
+		<script src="https://unpkg.com/leaflet.control.layers.tree@1.1.0/L.Control.Layers.Tree.js"></script>
+		<link rel="stylesheet" href="https://unpkg.com/leaflet.control.layers.tree@1.1.0/L.Control.Layers.Tree.css" />
+
+
+		<!-- Load leaflet locatecontrol from CDN https://github.com/domoritz/leaflet-locatecontrol -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/L.Control.Locate.min.css" />
+		<script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/L.Control.Locate.min.js" charset="utf-8"></script>
+
+
+		<!-- Leaflet plugin for geopackage support -->
+		<script src="https://unpkg.com/@ngageoint/leaflet-geopackage@4.1.3/dist/leaflet-geopackage.min.js"></script>
+
+        <script type="text/javascript">
+
+			// Define map with initial view
+            const map = L.map('map').setView([-33.87, 151.2], 14); // sydney
+		
+			// function for creation of geojson layers from a file url
+			function createGeoJsonLayer({ url, popupField = 'name', styleOptions = {} }) {
+				// Define the GeoJSON layer with the specified popup and style
+				const geoJsonLayer = L.geoJSON(null, {
+					onEachFeature: function (feature, layer) {
+						if (feature.properties && feature.properties[popupField]) {
+							layer.bindPopup(feature.properties[popupField]);
+						}
+					},
+					style: function () {
+						// Apply default or custom style options
+						return {
+							color: styleOptions.color || "#3388ff",
+							weight: styleOptions.weight || 2,
+							opacity: styleOptions.opacity || 1
+						};
+					}
+				});
+
+				// Load GeoJSON data and add it to the layer
+				fetch(url)
+					.then(response => response.json())
+					.then(data => {
+					geoJsonLayer.addData(data); // Add data to the layer
+					})
+					.catch(error => console.error("Error loading GeoJSON:", error));
+
+				return geoJsonLayer; // Return the configured GeoJSON layer
+			}
+
+
+			// source attribution vars
+			const licence_cc_by_4_0 = 'This product is released under the <a href="http://creativecommons.org/licenses/by/4.0/legalcode">Creative Commons Attribution 4.0 International Licence.</a>'
+
+			const attrib_nsw_ss = '&copy; <a href="https://www.spatial.nsw.gov.au">DCS Spatial Services</a>'
+			const attrib_ga = '&copy; Commonwealth of Australia (Geoscience Australia).' + licence_cc_by_4_0
+            const attrib_sydney = '&copy; City of Sydney.' + licence_cc_by_4_0
+
+			///////////////////////////
+			//	basemaps
+			///////////////////////////
+			
+			// NSW raster imagery layer
+			const basemap_raster_ss_nsw_imagery = L.tileLayer('https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer/tile/{z}/{y}/{x}', {
+				maxZoom: 21,
+				//maxNativeZoom: 16,
+				attribution: attrib_nsw_ss
+			});			
+			
+			// NSW poi topo basemap
+			const basemap_raster_ss_nsw_poi_topo = L.esri.tiledMapLayer({url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/sixmaps/LPIMap/MapServer',
+				maxZoom: 21,
+				maxNativeZoom: 18,
+				attribution: attrib_nsw_ss
+			}).addTo(map);
+
+            //Google Maps imagery layer
+			const basemap_raster_google_imagery = new L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+				maxZoom: 21,
+				maxNativeZoom: 20,
+				subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+				attribution: 'Basemap Imagery data &copy; <a href="https://www.google.com/maps">Google</a>'
+			});
+			
+			///////////////////////////
+			// jacarandas
+			///////////////////////////
+
+			// esri datasource from city of sydney
+			const vector_sydney_jacaranda = L.esri.featureLayer({
+				url: "https://services1.arcgis.com/cNVyNtjGVZybOQWZ/arcgis/rest/services/Trees/FeatureServer/0",
+				// simplifyFactor: 0.5,
+				// precision: 4,
+				attribution: attrib_sydney,
+				where: "CommonName='Jacaranda'",
+				minZoom: 8,
+				pointToLayer: function (feature, latlng) {
+					return L.circleMarker(latlng, {
+						radius: 5, // Size of the circle marker
+						color: '#9A2EFE', // Border color
+						fillColor: '#9A2EFE', // Fill color
+						fillOpacity: 0.8, // Opacity of the fill
+						weight: 1 // Border thickness
+					});
+				}
+			});
+
+
+			// // static geojson datasource from city of sydney
+			// const sydney_jacaranda_geojson_url = ``;
+			// const vector_sydney_jacaranda_geojson = createGeoJsonLayer({
+			// 	url: sydney_jacaranda_geojson_url,
+			// 	// popupField: 'name',
+			// 	styleOptions: {
+			// 		color: "#3388ff",
+			// 		weight: 2,
+			// 		opacity: 1
+			// 	}
+			// });
+
+			///////////////////////////
+			// arcgis server vector popups
+			// https://developers.arcgis.com/esri-leaflet/samples/feature-layer-popups/
+			///////////////////////////
+			
+			// function to simplify popup definition
+			function bindPopupToLayer(layer, formatString) {
+				layer.bindPopup(function (featureLayer) {
+					return L.Util.template(formatString, featureLayer.feature.properties);
+				});
+			}
+			
+			// // popup layers and format strings
+			// bindPopupToLayer(vector_sydney_jacaranda, 
+			// 	`<p>{SpeciesName} - {TreeHeight}m high</p>
+			// `);
+
+			///////////////////////////
+			// layer control 
+			///////////////////////////
+
+			// base tree
+			var baseTree = [
+				{
+					label: 'Background Map',
+					collapsed: true,
+					children: [
+						{ label: 'NSW Maps', layer: basemap_raster_ss_nsw_poi_topo },
+						{ label: 'NSW Imagery', layer: basemap_raster_ss_nsw_imagery },
+						{ label: 'Google Imagery', layer: basemap_raster_google_imagery },
+					]
+				},
+			];
+			
+			// overlay tree
+			var overlaysTree = {
+				label: 'Overlays',
+				//selectAllCheckbox: 'Un/select all',
+				collapsed: true,
+				children: [
+					{ label: 'Jacarandas', layer: vector_sydney_jacaranda },
+				]
+			};
+
+			// have the jacaranda layer added by default
+			vector_sydney_jacaranda.addTo(map);
+			
+
+			// define layer control and add
+			L.control.layers.tree(baseTree, overlaysTree, {
+				collapsed: false
+			}).addTo(map);
+
+
+			///////////////////////////
+			// gps
+			///////////////////////////
+
+			// sourced from https://github.com/domoritz/leaflet-locatecontrol
+			map.addControl(
+			  L.control.locate({
+				locateOptions: {
+				  enableHighAccuracy: true
+				}
+			  })
+			);
+			
+
+        </script>
+    </body>
+</html>
